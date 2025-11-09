@@ -3,7 +3,8 @@ import Field from "../Fields/Field";
 import Select from "../Fields/Select";
 import NumberInput from "../Fields/NumberInput";
 import ResultCard from "../ResultCard/ResultCard";
-import { calculatePrice } from "../../api/client.js";
+import { getPriceThenSimilar } from "../../services/diamondService";
+import SimilarDiamond from "../SimilarDiamond/SimilarDiamond.jsx";
 import {
   SHAPES,
   COLORS,
@@ -22,11 +23,13 @@ const INITIAL = {
   fluorescence: "N",
 };
 
- function Calculator() {
+function Calculator() {
   const [form, setForm] = useState(INITIAL);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const [similar, setSimilar] = useState([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
 
   const update = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -34,21 +37,23 @@ const INITIAL = {
     e.preventDefault();
     setError("");
     setResult(null);
+    setSimilar([]);
     setLoading(true);
+
     try {
-      const data = await calculatePrice({
-        shape: form.shape,
-        carat: Number(form.carat),
-        color: form.color,
-        clarity: form.clarity,
-        polish: form.polish,
-        symmetry: form.symmetry,
-        fluorescence: form.fluorescence,
+      const { similar } = await getPriceThenSimilar(form, {
+        onPrice: (priceData) => {
+          setResult(priceData);
+          setLoading(false);
+          setSimilarLoading(true);
+        },
       });
-      setResult(data);
+
+      setSimilar(similar);
     } catch (err) {
       setError(err.message || "Request failed");
     } finally {
+      setSimilarLoading(false);
       setLoading(false);
     }
   };
@@ -167,8 +172,10 @@ const INITIAL = {
       </form>
 
       <ResultCard loading={loading} error={error} result={result} />
+
+      <SimilarDiamond items={similar} loading={similarLoading} />
     </section>
   );
 }
 
-export default Calculator
+export default Calculator;

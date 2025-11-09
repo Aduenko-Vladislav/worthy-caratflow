@@ -1,7 +1,10 @@
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
+const BASE_URL = "http://localhost:3500";
+
 export const api = axios.create({
+  baseURL: BASE_URL,
   timeout: 10_000,
   headers: {
     "Content-Type": "application/json",
@@ -18,12 +21,12 @@ axiosRetry(api, {
     (error.response && error.response.status >= 500),
 });
 
-export async function calculatePrice(payload) {
+export async function fetchSimilarDiamonds(payload) {
   try {
-    const { data } = await api.post("/price/calculate", payload);
+    const { data } = await api.post("/price/similar", payload);
     return data;
   } catch (err) {
-    console.error("API error:", err.message);
+    console.error("Similar error:", err.message);
     throw err;
   }
 }
