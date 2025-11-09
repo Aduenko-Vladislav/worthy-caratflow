@@ -10,7 +10,7 @@ app.use(express.json());
 
 const PORT = Number(process.env.PORT) || 3500;
 
-app.use("/api", pricingRouter);
+app.use("/price", pricingRouter);
 
 // Healthcheck
 app.get("/health", (_req, res) => res.json({ ok: true }));
