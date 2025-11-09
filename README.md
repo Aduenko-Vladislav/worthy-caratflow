@@ -71,48 +71,7 @@ The server will run at `http://localhost:3500` and respond to `/health`.
 cd frontend
 npm run dev
 ```
-Vite will start a dev server (usually `http://localhost:5173`).
-
----
-
-## 🧱 Project Structure
-
-```
-worthy-caratflow/
-├─ backend/
-│  ├─ src/
-│  │  ├─ index.ts|js               # Express bootstrap
-│  │  ├─ routes/
-│  │  │  └─ pricingRouter.ts|js    # /api/pricing/*
-│  │  ├─ services/
-│  │  │  └─ PricingService.ts|js   # Similar diamonds logic
-│  │  ├─ db/
-│  │  │  ├─ mongoClient.ts|js
-│  │  │  └─ seedDiamonds.ts|js     # seeding script
-│  │  ├─ middleware/
-│  │  │  ├─ validation.ts|js       # Joi/Zod validation
-│  │  │  └─ errors.ts|js           # error handler
-│  │  ├─ validation/
-│  │  │  └─ priceSchema.ts|js
-│  │  └─ logger/
-│  │     └─ winstonLogging.ts|js
-│  ├─ package.json
-│  └─ .env
-└─ frontend/
-   ├─ src/
-   │  ├─ App.tsx|jsx
-   │  ├─ api/axios.ts
-   │  ├─ components/
-   │  │  ├─ DiamondForm.tsx
-   │  │  └─ DiamondList.tsx
-   │  └─ types/
-   │     └─ diamond.ts
-   ├─ vite.config.ts
-   ├─ package.json
-   └─ .env
-```
-
----
+Vite will start a dev server (usually `http://localhost:
 
 ## 🗄️ Database Model (MongoDB)
 
@@ -140,83 +99,6 @@ db.diamonds.createIndex({ shape: 1, carat: 1 });
 db.diamonds.createIndex({ color: 1, clarity: 1 });
 ```
 
----
-
-## 🌱 Seeding Data
-
-Create `backend/seed/diamonds.json` with diamond objects as above.  
-You can reuse the same image for simplicity:
-
-```json
-[
-  {
-    "shape": "Round",
-    "carat": 1.2,
-    "color": "F",
-    "clarity": "VS1",
-    "polish": "EX",
-    "symmetry": "VG",
-    "fluorescence": "N",
-    "priceUSD": 8900,
-    "image": "https://clemen1992.ru/_si/0/73416575.jpg"
-  },
-  {
-    "shape": "Round",
-    "carat": 1.18,
-    "color": "F",
-    "clarity": "VS1",
-    "polish": "EX",
-    "symmetry": "VG",
-    "fluorescence": "N",
-    "priceUSD": 8650,
-    "image": "https://clemen1992.ru/_si/0/73416575.jpg"
-  }
-]
-```
-
-Example seeding script `backend/src/db/seedDiamonds.ts`:
-```ts
-import fs from "fs";
-import { MongoClient } from "mongodb";
-
-const uri = process.env.MONGODB_URI!;
-const dbName = process.env.MONGODB_DB || "worthy";
-
-async function main() {
-  const data = JSON.parse(fs.readFileSync("seed/diamonds.json", "utf-8"));
-  const client = new MongoClient(uri);
-  await client.connect();
-  const db = client.db(dbName);
-  const col = db.collection("diamonds");
-
-  await col.deleteMany({});
-  await col.insertMany(data);
-  console.log(`Seeded ${data.length} diamonds`);
-  await client.close();
-}
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
-```
-
-Add to `backend/package.json`:
-```json
-{
-  "scripts": {
-    "seed:diamonds": "ts-node src/db/seedDiamonds.ts"
-  }
-}
-```
-
-Run seeding:
-```bash
-cd backend
-npm run seed:diamonds
-```
-
----
 
 ## 🔌 API
 
