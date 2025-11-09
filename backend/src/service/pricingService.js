@@ -1,5 +1,14 @@
+import { mongoConnection } from "../db/MongoConnection.js";
+import logger from "../logger/winstonLogging.js";
+
+const COLLECTION = process.env.MONGO_COLLECTION || "diamonds";
 class PricingService {
-  //Shape
+  #diamonds;
+
+  constructor() {
+    this.#diamonds = mongoConnection.getCollection(COLLECTION);
+  }
+
   static shapeMultipliers = {
     Round: 1.2,
     Princess: 1.1,
@@ -11,7 +20,6 @@ class PricingService {
     Cushion: 1.05,
   };
 
-  // Color
   static colorMultipliers = {
     D: 1.5,
     E: 1.4,
@@ -25,40 +33,36 @@ class PricingService {
     M: 0.6,
   };
 
-  // Clarity
   static clarityMultipliers = {
-    FL: 2.0, // Flawless
-    IF: 1.8, // Internally Flawless
-    VVS1: 1.6, // Very Very Slightly Included 1
-    VVS2: 1.5, // Very Very Slightly Included 2
-    VS1: 1.3, // Very Slightly Included 1
-    VS2: 1.2, // Very Slightly Included 2
-    SI1: 1.1, // Slightly Included 1
-    SI2: 1.0, // Slightly Included 2
-    I1: 0.8, // Included 1
-    I2: 0.6, // Included 2
-    I3: 0.4, // Included 3
+    FL: 2.0,
+    IF: 1.8,
+    VVS1: 1.6,
+    VVS2: 1.5,
+    VS1: 1.3,
+    VS2: 1.2,
+    SI1: 1.1,
+    SI2: 1.0,
+    I1: 0.8,
+    I2: 0.6,
+    I3: 0.4,
   };
 
-  // Polish
   static polishMultipliers = {
-    Ex: 1.1,
+    EX: 1.1,
     VG: 1.05,
     G: 1.0,
     F: 0.95,
     P: 0.9,
   };
 
-  // Symmetry
   static symmetryMultipliers = {
-    Ex: 1.1,
+    EX: 1.1,
     VG: 1.05,
     G: 1.0,
     F: 0.95,
     P: 0.9,
   };
 
-  // Fluorescence
   static fluorescenceMultipliers = {
     N: 1.0,
     F: 0.98,
@@ -76,7 +80,7 @@ class PricingService {
     symmetry,
     fluorescence,
   }) {
-    const basePrice = carat * 10000; // base price
+    const basePrice = carat * 10000;
 
     const shapeMultiplier = this.shapeMultipliers[shape] || 1.0;
     const colorMultiplier = this.colorMultipliers[color] || 1.0;
@@ -97,6 +101,7 @@ class PricingService {
 
     return {
       price: Math.round(finalPrice * 100) / 100,
+      currency: "USD",
       shape,
       carat,
       color,
@@ -105,6 +110,40 @@ class PricingService {
       symmetry,
       fluorescence,
     };
+  }
+
+  async getSimilar({ shape, carat, color, clarity }, { limit = 4, caratTolerance = 0.1 } = {}) {
+    const tryOnce = async (opts) => {
+      const { tol, dropClarity } = opts;
+      const caratMin = carat * (1 - tol);
+      const caratMax = carat * (1 + tol);
+      const match = {
+        shape,
+        color,
+        ...(dropClarity ? {} : { clarity }),
+        carat: { $gte: caratMin, $lte: caratMax },
+      };
+  
+      const pipeline = [
+        { $match: match },
+        { $addFields: { _caratDiff: { $abs: { $subtract: ["$carat", carat] } } } },
+        { $sort: { _caratDiff: 1, priceUSD: 1 } },
+        { $project: { _caratDiff: 0 } },
+        { $limit: limit },
+      ];
+      return this.#diamonds.aggregate(pipeline).toArray();
+    };
+  
+ 
+    let items = await tryOnce({ tol: caratTolerance, dropClarity: false });
+    if (items.length) return items;
+  
+    items = await tryOnce({ tol: 0.2, dropClarity: false });
+    if (items.length) return items;
+  
+
+    items = await tryOnce({ tol: 0.2, dropClarity: true });
+    return items;
   }
 }
 
